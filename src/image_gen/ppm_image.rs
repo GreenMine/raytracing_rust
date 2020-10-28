@@ -3,25 +3,25 @@ use std::io::prelude::*;
 use crate::data_structures::Vec3;
 
 pub struct PpmImage {
-    pub(crate) file: File,
-               width: usize,
-               height: usize
+   width: usize,
+   height: usize,
+   buffer: String
 }
 
 impl PpmImage {
-    pub fn new(file: File, width: usize, height: usize) -> PpmImage {
-        PpmImage {file, width, height}
+    pub fn new(width: usize, height: usize) -> Self {
+        Self {width, height, buffer: format!("P3\n{} {}\n255\n", width, height)}
     }
 
-    pub fn open(&mut self) -> Result<(), std::io::Error> {
-        self.write_string(format!("P3\n{} {}\n255\n", self.width, self.height))
-    }
-
-    pub fn write_vec3(&mut self, vec: Vec3) -> Result<(), std::io::Error> {
+    pub fn write_vec3(&mut self, vec: Vec3) {
         self.write_string(format!("{} {} {}\n", (vec.x() * 255.999) as u32, (vec.y() * 255.999) as u32, (vec.z() * 255.999) as u32))
     }
 
-    pub fn write_string(&mut self, string: String) -> Result<(), std::io::Error> {
-        self.file.write_all(string.as_bytes())
+    pub fn write_string(&mut self, string: String) {
+        self.buffer += &string[..];
+    }
+    
+    pub fn save_to_file(&mut self, mut file: File) -> Result<usize, std::io::Error> {
+        file.write(self.buffer.as_bytes())
     }
 }

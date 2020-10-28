@@ -1,10 +1,10 @@
 mod image_gen;
 mod data_structures;
+mod ray;
 
-
-use image_gen::ppm_image::PpmImage;
-use data_structures::Vec3;
-use data_structures::Vec3 as Color;
+use ray::Ray;
+use image_gen::PpmImage;
+use data_structures::{Vec3, Color, Point3};
 use std::{
     io::{
         self,
@@ -14,25 +14,28 @@ use std::{
 };
 
 
-const IMAGE_WIDTH:  usize = 1024;
-const IMAGE_HEIGHT: usize = 1024;
+const IMAGE_WIDTH:  usize = 400;
+const IMAGE_HEIGHT: usize = 400;
 
 fn main() -> io::Result<()> {
+    //Create image
     let mut stderr: io::Stderr = io::stderr();
-    let mut image = PpmImage::new(File::create("test_image.ppm")?, IMAGE_WIDTH, IMAGE_HEIGHT);
-    image.open()?;
-    
+    let mut image = PpmImage::new(IMAGE_WIDTH, IMAGE_HEIGHT);
+
+    //Render
     for j in (0..IMAGE_HEIGHT).rev() {
         write!(stderr, "\rScanliner remaining {} ", j)?;
         stderr.flush()?;
         for i in 0..IMAGE_WIDTH {
-            image.write_vec3(Color((i as f64) / ((IMAGE_WIDTH  - 1) as f64), (j as f64) / ((IMAGE_HEIGHT - 1) as f64), 0.25f64))?;
-//            let r = (i as f64) / ((IMAGE_WIDTH  - 1) as f64);
-//            let g = (j as f64) / ((IMAGE_HEIGHT - 1) as f64);
-//            let b = 0.25f64;
-//            image.write_string(format!("{} {} {}\n", (255.999 * r) as i32, (255.999 * g) as i32, (255.999 * b) as i32))?;
+            image.write_vec3(Color((i as f64) / ((IMAGE_WIDTH  - 1) as f64),
+                                        (j as f64) / ((IMAGE_HEIGHT - 1) as f64),
+                                        0.25f64));
         }
     }
+
+    //Save image
+    write!(stderr, "\nSaving...")?;
+    image.save_to_file(File::create("test_image.ppm")?)?;
     write!(stderr, "\nDone.\n")?;
     Ok(())
 }
