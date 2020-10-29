@@ -1,12 +1,12 @@
 use std::{
     fmt,
-    ops::{AddAssign, Neg, MulAssign, Mul, Add, DivAssign}
+    ops::{AddAssign, Neg, MulAssign, Mul, Add, DivAssign, Div, Sub}
 };
 
 pub use Vec3 as Point3;
 pub use Vec3 as Color;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct Vec3(
     pub(crate) f64,
     pub(crate) f64,
@@ -14,7 +14,6 @@ pub struct Vec3(
 );
 
 impl Vec3 {
-
     pub(crate) const fn x(&self) -> f64 {self.0}
     pub(crate) const fn y(&self) -> f64 {self.1}
     pub(crate) const fn z(&self) -> f64 {self.2}
@@ -26,6 +25,10 @@ impl Vec3 {
     pub(crate) fn length_squared(&self) -> f64 {
         self.x()*self.x() + self.y()*self.y() + self.z()*self.z()
     } 
+}
+
+pub fn unit_vector(v: Vec3) -> Vec3 {
+    v / v.length()
 }
 
 impl fmt::Display for Vec3 {
@@ -83,5 +86,23 @@ impl Mul<Vec3> for f64 {
     fn mul(self, mut rhs: Vec3) -> Self::Output {
         rhs *= self;
         rhs
+    }
+}
+
+impl Div<f64> for Vec3 {
+    type Output = Self;
+    fn div(mut self, rhs: f64) -> Self::Output {
+        self /= rhs;
+        self
+    }
+}
+
+impl Sub for Vec3 {
+    type Output = Self;
+    fn sub(mut self, rhs: Self) -> Self::Output {
+        self.0 -= rhs.0;
+        self.1 -= rhs.1;
+        self.2 -= rhs.2;
+        self
     }
 }
