@@ -4,7 +4,7 @@ mod ray;
 
 use ray::Ray;
 use image_gen::PpmImage;
-use data_structures::{Vec3, Color, Point3};
+use data_structures::{Vec3, Color, Point3, dot};
 use std::{
     io::{
         self,
@@ -26,12 +26,12 @@ fn main() -> io::Result<()> {
     //Camera
     let viewport_height = 2.0;
     let viewport_width = ASPECT_RATIO * viewport_height;
-    let focal_length = 2.0;
+    let focal_length = 1.0;
 
     let origin = Vec3(0.0, 0.0, 0.0);
-    let horizontal = Vec3(viewport_width, 0.0, 0.0);//Max of horizontal position, i think
-    let vertical = Vec3(0.0, viewport_height, 0.0);//Max of vertical position, i think
-    let lower_left_corner = origin - horizontal / 2.0 - vertical / 2.0 - Vec3(0.0, 0.0, focal_length);//Get lower left cornet of the screen(horizontal and vertical divided by 2, because need half of the screen)
+    let horizontal = Vec3(viewport_width, 0.0, 0.0); //Max of horizontal position, i think
+    let vertical = Vec3(0.0, viewport_height, 0.0); //Max of vertical position, i think
+    let lower_left_corner = origin - horizontal / 2.0 - vertical / 2.0 - Vec3(0.0, 0.0, focal_length); //Get lower left cornet of the screen(horizontal and vertical divided by 2, because need half of the screen)
 
     //Render
     for j in (0..IMAGE_HEIGHT).rev() {
@@ -52,8 +52,22 @@ fn main() -> io::Result<()> {
     Ok(())
 }
 
+
 fn ray_color(ray: &Ray) -> Color {
-    let unit_direction = data_structures::unit_vector(ray.direction);//scaling to -1 < unit_direction < 1
-    let t = 0.5 * (unit_direction.y() + 1.0);//scaling to 0 < t < 1
+    if is_hit_sphere(&Point3(0.0, 0.0, 1.0), 0.5, ray) {
+        return Color(1.0, 0.0, 0.0);
+    }
+    let unit_direction = data_structures::unit_vector(ray.direction); //scaling to -1 < unit_direction < 1
+    let t = 0.5 * (unit_direction.y() + 1.0); //scaling to 0 < t < 1
     (1.0 - t) * Color(1.0, 1.0, 1.0) + t * Color(0.5, 0.7, 1.0)
+}
+
+fn is_hit_sphere(center: &Point3, radius: f64, ray: &Ray) -> bool {
+    let pos = ray.origin - *center;
+
+    let a = dot(&ray.direction, &ray.direction);
+    let b = 2.0 * dot(&ray.direction, &pos);
+    let c = dot(&pos, &pos) - radius * radius;
+    
+    b * b - 4.0 * a * c > 0.0
 }

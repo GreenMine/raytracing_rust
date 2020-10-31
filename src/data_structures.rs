@@ -31,6 +31,12 @@ pub fn unit_vector(v: Vec3) -> Vec3 {
     v / v.length()
 }
 
+pub fn dot(u: &Vec3, v: &Vec3) -> f64 {
+    u.0 * v.0 +
+    u.1 * v.1 +
+    u.2 * v.2
+}
+
 impl fmt::Display for Vec3 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} {} {}", self.x(), self.y(), self.z())
