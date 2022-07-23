@@ -1,10 +1,12 @@
 mod image_gen;
-mod data_structures;
-mod ray;
+mod ray_tracer;
 
-use ray::Ray;
+use ray_tracer::{
+    Hittable, HittableList, Ray,
+    data_structures::{self, Vec3, Color, Point3, dot},
+    objects::{Sphere, Triangle}
+};
 use image_gen::PpmImage;
-use data_structures::{Vec3, Color, Point3, dot};
 use std::{
     io::{
         self,
@@ -15,13 +17,18 @@ use std::{
 
 
 const ASPECT_RATIO: f64 = 16.0 / 9.0;
-const IMAGE_WIDTH:  usize = 400;
+const IMAGE_WIDTH:  usize = 1920;
 const IMAGE_HEIGHT: usize = (IMAGE_WIDTH as f64 / ASPECT_RATIO) as usize;
 
 fn main() -> io::Result<()> {
     //Create image
     let mut stderr: io::Stderr = io::stderr();
     let mut image = PpmImage::new(IMAGE_WIDTH, IMAGE_HEIGHT);
+
+    //Objects
+    let mut world = HittableList::new();
+    world.add(Sphere { center: Point3(0.0, 0.0, -1.0)   , radius: 0.5});
+    world.add(Sphere { center: Point3(0.0, -100.5, -1.0), radius: 100.0});
     
     //Camera
     let viewport_height = 2.0;
@@ -54,20 +61,15 @@ fn main() -> io::Result<()> {
 
 
 fn ray_color(ray: &Ray) -> Color {
-    if is_hit_sphere(&Point3(0.0, 0.0, 1.0), 0.5, ray) {
-        return Color(1.0, 0.0, 0.0);
+    let sphere_center = Point3(0.0, 0.0, -1.0);
+
+
+    let hit = hit_sphere(&sphere_center, 0.5, ray);
+    if hit > 0.0 {
+        let normals = data_structures::unit_vector(ray.at(hit) - sphere_center);
+        return 0.5 * Color(normals.x() + 1.0, normals.y() + 1.0, normals.z() + 1.0);
     }
     let unit_direction = data_structures::unit_vector(ray.direction); //scaling to -1 < unit_direction < 1
     let t = 0.5 * (unit_direction.y() + 1.0); //scaling to 0 < t < 1
     (1.0 - t) * Color(1.0, 1.0, 1.0) + t * Color(0.5, 0.7, 1.0)
-}
-
-fn is_hit_sphere(center: &Point3, radius: f64, ray: &Ray) -> bool {
-    let pos = ray.origin - *center;
-
-    let a = dot(&ray.direction, &ray.direction);
-    let b = 2.0 * dot(&ray.direction, &pos);
-    let c = dot(&pos, &pos) - radius * radius;
-    
-    b * b - 4.0 * a * c > 0.0
 }
