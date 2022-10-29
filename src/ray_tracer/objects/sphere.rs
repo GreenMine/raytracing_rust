@@ -28,9 +28,9 @@ impl Hittable for Sphere {
         }
 
         let sqrt_disc = discriminant.sqrt();
-        let mut x = (-half_b - sqrt_disc) / (2f64 * a);
+        let mut x = (-half_b - sqrt_disc) / a;
         if x < t_min || t_max < x {
-            x = (-half_b + sqrt_disc) / (2f64 * a);
+            x = (-half_b + sqrt_disc) / a;
             if x < t_min || t_max < x {
                 return false;
             }
@@ -39,7 +39,7 @@ impl Hittable for Sphere {
         hit_info.t = x;
         hit_info.point = ray.at(x);
 
-        let outward_normal = (ray.direction - self.center) / self.radius;
+        let outward_normal = (hit_info.point - self.center) / self.radius;
         hit_info.set_face_normal(ray, outward_normal);
 
         true

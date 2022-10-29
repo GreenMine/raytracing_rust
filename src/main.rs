@@ -26,6 +26,7 @@ fn main() -> io::Result<()> {
     //Objects
     let mut world = HittableList::new();
     world.add(Sphere::new(Point3(0.0, 0.0, -1.0), 0.5));
+    world.add(Sphere::new(Point3(0.0, -100.5, -1.0), 100.0));
 
     //Camera
     let viewport_height = 2.0;
@@ -58,28 +59,25 @@ fn main() -> io::Result<()> {
                 lower_left_corner + u * horizontal + v * vertical - origin,
             );
 
-            image.write_vec3(ray_color(ray, &mut world));
+            image.write_vec3(ray_color(ray, &world));
         }
     }
 
     //Save image
     write!(stderr, "\nSaving...")?;
-    image.save_to_file(File::create("test_image.ppm")?)?;
+    image.save_to_file(File::create("result/image.ppm")?)?;
     write!(stderr, "\nDone.\n")?;
     Ok(())
 }
 
-fn ray_color(ray: Ray, world: &mut HittableList) -> Color {
+fn ray_color(ray: Ray, world: &HittableList) -> Color {
+    let mut hit_info = HitInfo::default();
+    if world.hit(&ray, 0.0, f64::MAX, &mut hit_info) {
+        return 0.5 * (hit_info.normal + Color(1.0, 1.0, 1.0));
+    }
+
     let unit_direction = unit_vector(ray.direction); //scaling to -1 < unit_direction < 1
     let t = 0.5 * (unit_direction.y() + 1.0); //scaling to 0 < t < 1
-
-    let mut hit_info = HitInfo::default();
-    let hit = world.hit(&ray, 0.0, f64::MAX, &mut hit_info);
-
-    if hit {
-        let n = unit_vector(hit_info.point - Point3(0.0, 0.0, 1.0));
-        return 0.5 * Color(n.x() + 1.0, n.y() + 1.0, n.z() + 1.0);
-    }
 
     //blendedValue = (1−t) * startValue + t * endValue
     //Из формулы описанной выше, мы получаем что мы хотим получить линейный градиент
