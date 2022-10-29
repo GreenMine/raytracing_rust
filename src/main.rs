@@ -5,9 +5,9 @@ use crate::data_structures::unit_vector;
 use crate::ray_tracer::HitInfo;
 use image_gen::PpmImage;
 use ray_tracer::{
-    data_structures::{self, dot, Color, Point3, Vec3},
-    objects::{Sphere, Triangle},
-    Hittable, HittableList, Ray,
+    data_structures::{self, Color, Point3, Vec3},
+    objects::Sphere,
+    HittableList, Ray,
 };
 use std::{
     fs::File,
@@ -25,7 +25,7 @@ fn main() -> io::Result<()> {
 
     //Objects
     let mut world = HittableList::new();
-    world.add(Sphere::new(Point3(0.0, 0.0, -1.0), 1.0));
+    world.add(Sphere::new(Point3(0.0, 0.0, -1.0), 0.5));
 
     //Camera
     let viewport_height = 2.0;
@@ -70,16 +70,11 @@ fn main() -> io::Result<()> {
 }
 
 fn ray_color(ray: Ray, world: &mut HittableList) -> Color {
-    let mut hit_info = HitInfo::default();
-
     let unit_direction = unit_vector(ray.direction); //scaling to -1 < unit_direction < 1
     let t = 0.5 * (unit_direction.y() + 1.0); //scaling to 0 < t < 1
 
-    let hit = world
-        .objects
-        .iter()
-        .map(|obj| obj.hit(&ray, 0.0, f64::MAX, &mut hit_info))
-        .any(|f| f);
+    let mut hit_info = HitInfo::default();
+    let hit = world.hit(&ray, 0.0, f64::MAX, &mut hit_info);
 
     if hit {
         let n = unit_vector(hit_info.point - Point3(0.0, 0.0, 1.0));
@@ -90,14 +85,4 @@ fn ray_color(ray: Ray, world: &mut HittableList) -> Color {
     //Из формулы описанной выше, мы получаем что мы хотим получить линейный градиент
     //Из белого в голубой
     (1.0 - t) * Color(1.0, 1.0, 1.0) + t * Color(0.5, 0.7, 1.0)
-}
-
-fn is_hit_sphere(center: &Point3, radius: f64, ray: &Ray) -> bool {
-    let pos = ray.origin - *center;
-
-    let a = dot(&ray.direction, &ray.direction);
-    let b = 2.0 * dot(&ray.direction, &pos);
-    let c = dot(&pos, &pos) - radius * radius;
-
-    b * b - 4.0 * a * c > 0.0
 }

@@ -40,7 +40,7 @@ impl Hittable for Sphere {
         hit_info.point = ray.at(x);
 
         let outward_normal = (ray.direction - self.center) / self.radius;
-        hit_info.set_face_normal(&ray, outward_normal);
+        hit_info.set_face_normal(ray, outward_normal);
 
         true
     }
