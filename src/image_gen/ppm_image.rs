@@ -17,12 +17,14 @@ impl PpmImage {
         }
     }
 
-    pub fn write_vec3(&mut self, vec: Vec3) {
+    pub fn write_vec3(&mut self, mut vec: Vec3, samples_per_pixel: u16) {
+        vec /= samples_per_pixel as f64;
+
         self.write_string(format!(
             "{} {} {}\n",
-            (vec.x() * 255.999) as u32,
-            (vec.y() * 255.999) as u32,
-            (vec.z() * 255.999) as u32
+            (256.0 * clamp(vec.x(), 0.0, 0.999)) as u32,
+            (256.0 * clamp(vec.y(), 0.0, 0.999)) as u32,
+            (256.0 * clamp(vec.z(), 0.0, 0.999)) as u32
         ))
     }
 
@@ -32,5 +34,15 @@ impl PpmImage {
 
     pub fn save_to_file(&mut self, mut file: File) -> Result<usize, std::io::Error> {
         file.write(self.buffer.as_bytes())
+    }
+}
+
+const fn clamp(x: f64, min: f64, max: f64) -> f64 {
+    if x < min {
+        min
+    } else if x > max {
+        max
+    } else {
+        x
     }
 }

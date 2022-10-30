@@ -1,9 +1,12 @@
+#![feature(const_fn_floating_point_arithmetic)]
+
 mod image_gen;
 mod ray_tracer;
 
 use crate::data_structures::unit_vector;
-use crate::ray_tracer::HitInfo;
+use crate::ray_tracer::{Camera, HitInfo};
 use image_gen::PpmImage;
+use rand::Rng;
 use ray_tracer::{
     data_structures::{self, Color, Point3, Vec3},
     objects::Sphere,
@@ -17,6 +20,7 @@ use std::{
 const ASPECT_RATIO: f64 = 16.0 / 9.0;
 const IMAGE_WIDTH: usize = 1920;
 const IMAGE_HEIGHT: usize = (IMAGE_WIDTH as f64 / ASPECT_RATIO) as usize;
+const SAMPLES_PER_PIXEL: u16 = 100;
 
 fn main() -> io::Result<()> {
     //Create image
@@ -26,40 +30,29 @@ fn main() -> io::Result<()> {
     //Objects
     let mut world = HittableList::new();
     world.add(Sphere::new(Point3(0.0, 0.0, -1.0), 0.5));
-    world.add(Sphere::new(Point3(0.0, -100.5, -1.0), 100.0));
+    world.add(Sphere::new(Point3(0.0, -101.0, -1.0), 100.0));
 
     //Camera
-    let viewport_height = 2.0;
-    let viewport_width = viewport_height * ASPECT_RATIO;
-    let focal_length = 1.0;
+    let camera = Camera::new();
 
-    let origin = Vec3(0.0, 0.0, 0.0);
-    let horizontal = Vec3(viewport_width, 0.0, 0.0); //Максимальная горизонтальная(по x) позиция
-    let vertical = Vec3(0.0, viewport_height, 0.0); //Максимальная вертикальная(по y) позиция
-
-    //Получаем левый нижний угол на 3-х мерном графике
-    //Деление на 2 необходимо, т.к. на графике у нас есть положительные и отрицательные части
-    //origin - horizontal / 2.0 - vertical / 2.0 - Vec3(0.0, 0.0, focal_length); => аналогия
-    let lower_left_corner =
-        origin - Vec3(viewport_width / 2.0, viewport_height / 2.0, focal_length);
-
-    println!("Horizontal: {}", horizontal);
-    println!("Vertical: {}", vertical);
-    println!("Left corner: {}", lower_left_corner);
+    //Random
+    let mut rand = rand::thread_rng();
 
     //Render
     for j in (0..IMAGE_HEIGHT).rev() {
         write!(stderr, "\rScanlines remaining: {}", j)?;
         stderr.flush()?;
         for i in 0..IMAGE_WIDTH {
-            let u = i as f64 / (IMAGE_WIDTH - 1) as f64;
-            let v = j as f64 / (IMAGE_HEIGHT - 1) as f64;
-            let ray = Ray::new(
-                origin,
-                lower_left_corner + u * horizontal + v * vertical - origin,
-            );
+            let mut pixel_color = Color::default();
+            for _s in 0..SAMPLES_PER_PIXEL {
+                let u = (i as f64 + rand.gen::<f64>()) / (IMAGE_WIDTH - 1) as f64;
+                let v = (j as f64 + rand.gen::<f64>()) / (IMAGE_HEIGHT - 1) as f64;
+                let ray = camera.get_ray(u, v);
 
-            image.write_vec3(ray_color(ray, &world));
+                pixel_color += ray_color(ray, &world);
+            }
+
+            image.write_vec3(pixel_color, SAMPLES_PER_PIXEL);
         }
     }
 

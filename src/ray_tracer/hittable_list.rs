@@ -33,8 +33,11 @@ impl HittableList {
             if obj.hit(ray, t_min, closest_so_far, &mut tmp_info) {
                 hit_anything = true;
                 closest_so_far = tmp_info.t;
-                *hit_info = tmp_info.clone();
             }
+        }
+
+        if hit_anything {
+            *hit_info = tmp_info;
         }
 
         hit_anything
