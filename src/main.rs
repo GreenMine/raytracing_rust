@@ -12,10 +12,13 @@ use ray_tracer::{
     objects::Sphere,
     HittableList, Ray,
 };
+use std::sync::{Arc, Mutex};
 use std::{
     fs::File,
     io::{self, prelude::*},
 };
+
+use rayon::prelude::*;
 
 const ASPECT_RATIO: f64 = 16.0 / 9.0;
 const IMAGE_WIDTH: usize = 3840;
@@ -26,24 +29,25 @@ const MAX_DEPTH: usize = 50;
 
 fn main() -> io::Result<()> {
     //Create image
-    let mut stderr: io::Stderr = io::stderr();
-    let mut image = PpmImage::new(IMAGE_WIDTH, IMAGE_HEIGHT);
+    let image = PpmImage::new(IMAGE_WIDTH, IMAGE_HEIGHT);
+    let image = Arc::new(Mutex::new(image));
 
     //Objects
     let mut world = HittableList::new();
     world.add(Sphere::new(Point3(0.0, 0.0, -1.0), 0.5));
     world.add(Sphere::new(Point3(0.0, -100.5, -1.0), 100.0));
 
+    let world = Arc::new(world);
+
     //Camera
     let camera = Camera::new();
 
-    //Random
-    let mut rand = rand::thread_rng();
-
     //Render
-    for j in (0..IMAGE_HEIGHT).rev() {
-        write!(stderr, "\rScanlines remaining: {}", j)?;
-        stderr.flush()?;
+    (0..IMAGE_HEIGHT).into_par_iter().rev().for_each(|j| {
+        let w = world.clone();
+        let image = image.clone();
+        let mut rand = rand::thread_rng();
+
         for i in 0..IMAGE_WIDTH {
             let mut pixel_color = Color::default();
             for _ in 0..SAMPLES_PER_PIXEL {
@@ -51,16 +55,24 @@ fn main() -> io::Result<()> {
                 let v = (j as f64 + rand.gen::<f64>()) / (IMAGE_HEIGHT - 1) as f64;
                 let ray = camera.get_ray(u, v);
 
-                pixel_color += ray_color(ray, &world, MAX_DEPTH);
+                pixel_color += ray_color(ray, &w, MAX_DEPTH);
             }
+            pixel_color /= SAMPLES_PER_PIXEL as f64;
 
-            image.write_vec3(pixel_color, SAMPLES_PER_PIXEL);
+            image
+                .lock()
+                .unwrap()
+                .write_vec3(pixel_color, SAMPLES_PER_PIXEL);
         }
-    }
+    });
 
     //Save image
+    let mut stderr: io::Stderr = io::stderr();
     write!(stderr, "\nSaving...")?;
-    image.save_to_file(File::create("result/image.ppm")?)?;
+    image
+        .lock()
+        .unwrap()
+        .save_to_file(File::create("result/image.ppm")?)?;
     write!(stderr, "\nDone.\n")?;
     Ok(())
 }
