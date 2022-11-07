@@ -9,11 +9,14 @@ pub struct PpmImage {
 }
 
 impl PpmImage {
+    // :o
     pub fn new(width: usize, height: usize) -> Self {
+        let mut buffer = String::with_capacity(width * height * 100);
+        buffer += &format!("P3\n{} {}\n255\n", width, height);
         Self {
             _width: width,
             _height: height,
-            buffer: format!("P3\n{} {}\n255\n", width, height),
+            buffer,
         }
     }
 
@@ -22,9 +25,9 @@ impl PpmImage {
 
         self.write_string(format!(
             "{} {} {}\n",
-            (256.0 * clamp(vec.x(), 0.0, 0.999)) as u32,
-            (256.0 * clamp(vec.y(), 0.0, 0.999)) as u32,
-            (256.0 * clamp(vec.z(), 0.0, 0.999)) as u32
+            (256.0 * clamp(vec.x().sqrt(), 0.0, 0.999)) as u32,
+            (256.0 * clamp(vec.y().sqrt(), 0.0, 0.999)) as u32,
+            (256.0 * clamp(vec.z().sqrt(), 0.0, 0.999)) as u32
         ))
     }
 

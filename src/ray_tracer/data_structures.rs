@@ -1,3 +1,6 @@
+use rand::distributions::{Standard, Uniform};
+use rand::prelude::Distribution;
+use rand::Rng;
 use std::{
     fmt,
     ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub},
@@ -10,6 +13,9 @@ pub use Vec3 as Color;
 pub struct Vec3(pub(crate) f64, pub(crate) f64, pub(crate) f64);
 
 impl Vec3 {
+    pub(crate) const fn single(n: f64) -> Self {
+        Self(n, n, n)
+    }
     pub(crate) const fn x(&self) -> f64 {
         self.0
     }
@@ -26,6 +32,29 @@ impl Vec3 {
 
     pub(crate) fn length_squared(&self) -> f64 {
         self.x() * self.x() + self.y() * self.y() + self.z() * self.z()
+    }
+
+    pub(crate) fn random<R: Rng>(rng: &mut R, min: f64, max: f64) -> Self {
+        Vec3(
+            rng.gen_range(min..max),
+            rng.gen_range(min..max),
+            rng.gen_range(min..max),
+        )
+    }
+
+    pub(crate) fn random_in_unit_sphere() -> Self {
+        let mut random = rand::thread_rng();
+        loop {
+            let p = Vec3::random(&mut random, -1.0, 1.0);
+            if p.length_squared() >= 1.0 {
+                continue;
+            }
+            return p;
+        }
+    }
+
+    pub(crate) fn random_unit_sphere() -> Self {
+        unit_vector(Self::random_in_unit_sphere())
     }
 }
 
@@ -110,5 +139,11 @@ impl Sub for Vec3 {
         self.1 -= rhs.1;
         self.2 -= rhs.2;
         self
+    }
+}
+
+impl Distribution<Vec3> for Standard {
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Vec3 {
+        Vec3(rng.gen(), rng.gen(), rng.gen())
     }
 }
