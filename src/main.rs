@@ -12,23 +12,27 @@ use ray_tracer::{
     objects::Sphere,
     HittableList, Ray,
 };
+use std::sync::atomic::Ordering::Relaxed;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
 use std::{
     fs::File,
     io::{self, prelude::*},
+    thread,
 };
 
+use rayon::prelude::*;
+
 const ASPECT_RATIO: f64 = 16.0 / 9.0;
-const IMAGE_WIDTH: usize = 3840;
+const IMAGE_WIDTH: usize = 1920;
 const IMAGE_HEIGHT: usize = (IMAGE_WIDTH as f64 / ASPECT_RATIO) as usize;
 const SAMPLES_PER_PIXEL: u16 = 100;
 
 const MAX_DEPTH: usize = 50;
 
+static SCANLINES_LEFT: AtomicUsize = AtomicUsize::new(IMAGE_HEIGHT);
 fn main() -> io::Result<()> {
-    //Create image
-    let mut stderr: io::Stderr = io::stderr();
-    let mut image = PpmImage::new(IMAGE_WIDTH, IMAGE_HEIGHT);
-
     //Objects
     let mut world = HittableList::new();
     world.add(Sphere::new(Point3(0.0, 0.0, -1.0), 0.5));
@@ -37,31 +41,55 @@ fn main() -> io::Result<()> {
     //Camera
     let camera = Camera::new();
 
-    //Random
-    let mut rand = rand::thread_rng();
-
     //Render
-    for j in (0..IMAGE_HEIGHT).rev() {
-        write!(stderr, "\rScanlines remaining: {}", j)?;
-        stderr.flush()?;
-        for i in 0..IMAGE_WIDTH {
-            let mut pixel_color = Color::default();
-            for _ in 0..SAMPLES_PER_PIXEL {
-                let u = (i as f64 + rand.gen::<f64>()) / (IMAGE_WIDTH - 1) as f64;
-                let v = (j as f64 + rand.gen::<f64>()) / (IMAGE_HEIGHT - 1) as f64;
-                let ray = camera.get_ray(u, v);
+    let world = Arc::new(world);
 
-                pixel_color += ray_color(ray, &world, MAX_DEPTH);
+    thread::spawn(|| {
+        let mut stdout = io::stdout();
+        loop {
+            let remaining = SCANLINES_LEFT.load(Relaxed);
+            let _ = write!(stdout, "\rScanlines remaining: {}", remaining);
+            let _ = stdout.flush();
+
+            if remaining == 0 {
+                break;
             }
 
-            image.write_vec3(pixel_color, SAMPLES_PER_PIXEL);
+            thread::sleep(Duration::from_millis(100));
         }
-    }
+    });
+
+    let image = (0..IMAGE_HEIGHT)
+        .into_par_iter()
+        .rev()
+        .map(|j| {
+            SCANLINES_LEFT.fetch_sub(1, Relaxed);
+
+            let mut row = Vec::with_capacity(IMAGE_WIDTH);
+            let w = world.clone();
+            let mut rand = rand::thread_rng();
+
+            for i in 0..IMAGE_WIDTH {
+                let mut pixel_color = Color::default();
+                for _ in 0..SAMPLES_PER_PIXEL {
+                    let u = (i as f64 + rand.gen::<f64>()) / (IMAGE_WIDTH - 1) as f64;
+                    let v = (j as f64 + rand.gen::<f64>()) / (IMAGE_HEIGHT - 1) as f64;
+                    let ray = camera.get_ray(u, v);
+
+                    pixel_color += ray_color(ray, &w, MAX_DEPTH);
+                }
+                pixel_color /= SAMPLES_PER_PIXEL as f64;
+                row.push(pixel_color);
+            }
+
+            row
+        })
+        .collect::<PpmImage>();
 
     //Save image
-    write!(stderr, "\nSaving...")?;
+    println!("\nSaving...");
     image.save_to_file(File::create("result/image.ppm")?)?;
-    write!(stderr, "\nDone.\n")?;
+    println!("Done");
     Ok(())
 }
 
