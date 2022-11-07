@@ -25,7 +25,7 @@ use std::{
 use rayon::prelude::*;
 
 const ASPECT_RATIO: f64 = 16.0 / 9.0;
-const IMAGE_WIDTH: usize = 3840;
+const IMAGE_WIDTH: usize = 1920;
 const IMAGE_HEIGHT: usize = (IMAGE_WIDTH as f64 / ASPECT_RATIO) as usize;
 const SAMPLES_PER_PIXEL: u16 = 100;
 
@@ -55,7 +55,7 @@ fn main() -> io::Result<()> {
                 break;
             }
 
-            thread::sleep(Duration::from_millis(200));
+            thread::sleep(Duration::from_millis(100));
         }
     });
 
@@ -87,12 +87,9 @@ fn main() -> io::Result<()> {
         .collect::<PpmImage>();
 
     //Save image
-    let mut stderr: io::Stderr = io::stderr();
-    write!(stderr, "\nSaving...")?;
-
+    println!("\nSaving...");
     image.save_to_file(File::create("result/image.ppm")?)?;
-
-    write!(stderr, "\nDone.\n")?;
+    println!("Done");
     Ok(())
 }
 
