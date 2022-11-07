@@ -12,6 +12,7 @@ use ray_tracer::{
     objects::Sphere,
     HittableList, Ray,
 };
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::{
     fs::File,
@@ -30,20 +31,25 @@ const MAX_DEPTH: usize = 50;
 fn main() -> io::Result<()> {
     //Create image
     let image = PpmImage::new(IMAGE_WIDTH, IMAGE_HEIGHT);
-    let image = Arc::new(Mutex::new(image));
 
     //Objects
     let mut world = HittableList::new();
     world.add(Sphere::new(Point3(0.0, 0.0, -1.0), 0.5));
     world.add(Sphere::new(Point3(0.0, -100.5, -1.0), 100.0));
 
-    let world = Arc::new(world);
-
     //Camera
     let camera = Camera::new();
 
     //Render
-    (0..IMAGE_HEIGHT).into_par_iter().rev().for_each(|j| {
+    let world = Arc::new(world);
+    let image = Arc::new(Mutex::new(image));
+    let scanlines_left = AtomicUsize::new(IMAGE_HEIGHT);
+
+    (0..IMAGE_HEIGHT).into_par_iter().for_each(|j| {
+        print!("\rScanlines remaining: {:?}", scanlines_left);
+        scanlines_left.fetch_sub(1, Ordering::Relaxed);
+
+        let mut row = Vec::with_capacity(IMAGE_WIDTH);
         let w = world.clone();
         let image = image.clone();
         let mut rand = rand::thread_rng();
@@ -52,27 +58,28 @@ fn main() -> io::Result<()> {
             let mut pixel_color = Color::default();
             for _ in 0..SAMPLES_PER_PIXEL {
                 let u = (i as f64 + rand.gen::<f64>()) / (IMAGE_WIDTH - 1) as f64;
-                let v = (j as f64 + rand.gen::<f64>()) / (IMAGE_HEIGHT - 1) as f64;
+                let v = ((IMAGE_HEIGHT - j) as f64 + rand.gen::<f64>()) / (IMAGE_HEIGHT - 1) as f64;
                 let ray = camera.get_ray(u, v);
 
                 pixel_color += ray_color(ray, &w, MAX_DEPTH);
             }
             pixel_color /= SAMPLES_PER_PIXEL as f64;
-
-            image
-                .lock()
-                .unwrap()
-                .write_vec3(pixel_color, SAMPLES_PER_PIXEL);
+            row.push(pixel_color);
         }
+
+        image.lock().unwrap().write_row(j, row);
     });
 
     //Save image
     let mut stderr: io::Stderr = io::stderr();
     write!(stderr, "\nSaving...")?;
-    image
-        .lock()
-        .unwrap()
-        .save_to_file(File::create("result/image.ppm")?)?;
+
+    if let Ok(image) = Arc::try_unwrap(image) {
+        image
+            .into_inner()
+            .unwrap()
+            .save_to_file(File::create("result/image.ppm")?)?;
+    }
     write!(stderr, "\nDone.\n")?;
     Ok(())
 }
