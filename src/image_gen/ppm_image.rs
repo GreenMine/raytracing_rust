@@ -1,5 +1,6 @@
 use crate::data_structures::Vec3;
 use crate::ray_tracer::data_structures::Color;
+use rayon::iter::{FromParallelIterator, IntoParallelIterator};
 use std::fs::File;
 use std::io::prelude::*;
 
@@ -15,6 +16,15 @@ impl PpmImage {
         Self {
             width,
             height,
+            buffer,
+        }
+    }
+
+    pub fn from_raw(buffer: Vec<Vec<Vec3>>) -> Self {
+        assert_ne!(buffer.len(), 0);
+        Self {
+            width: buffer[0].len(),
+            height: buffer.len(),
             buffer,
         }
     }
@@ -44,6 +54,16 @@ impl PpmImage {
 
         file.write(buffer.as_bytes())?;
         Ok(())
+    }
+}
+
+impl FromParallelIterator<Vec<Vec3>> for PpmImage {
+    fn from_par_iter<I>(par_iter: I) -> Self
+    where
+        I: IntoParallelIterator<Item = Vec<Vec3>>,
+    {
+        use rayon::iter::ParallelIterator;
+        PpmImage::from_raw(par_iter.into_par_iter().collect::<Vec<_>>())
     }
 }
 
