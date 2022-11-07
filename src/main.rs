@@ -101,7 +101,8 @@ fn ray_color(ray: Ray, world: &HittableList, depth: usize) -> Color {
     }
 
     if world.hit(&ray, 0.001, f64::INFINITY, &mut hit_info) {
-        let target = hit_info.point + hit_info.normal + Vec3::random_unit_sphere();
+        let target =
+            hit_info.point + hit_info.normal + Vec3::random_in_hemisphere(&hit_info.normal);
         return 0.5
             * ray_color(
                 Ray::new(hit_info.point, target - hit_info.point),

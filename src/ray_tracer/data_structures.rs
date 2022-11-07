@@ -53,8 +53,13 @@ impl Vec3 {
         }
     }
 
-    pub(crate) fn random_unit_sphere() -> Self {
-        unit_vector(Self::random_in_unit_sphere())
+    pub(crate) fn random_in_hemisphere(normal: &Self) -> Self {
+        let in_unit_sphere = Vec3::random_in_unit_sphere();
+        return if dot(&in_unit_sphere, normal) > 0.0 {
+            in_unit_sphere
+        } else {
+            -in_unit_sphere
+        };
     }
 }
 
