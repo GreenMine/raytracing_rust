@@ -25,13 +25,12 @@ use std::{
 use rayon::prelude::*;
 
 const ASPECT_RATIO: f64 = 16.0 / 9.0;
-const IMAGE_WIDTH: usize = 1920;
+const IMAGE_WIDTH: usize = 3840;
 const IMAGE_HEIGHT: usize = (IMAGE_WIDTH as f64 / ASPECT_RATIO) as usize;
 const SAMPLES_PER_PIXEL: u16 = 100;
 
 const MAX_DEPTH: usize = 50;
 
-static SCANLINES_LEFT: AtomicUsize = AtomicUsize::new(IMAGE_HEIGHT);
 fn main() -> io::Result<()> {
     //Objects
     let mut world = HittableList::new();
@@ -44,26 +43,13 @@ fn main() -> io::Result<()> {
     //Render
     let world = Arc::new(world);
 
-    thread::spawn(|| {
-        let mut stdout = io::stdout();
-        loop {
-            let remaining = SCANLINES_LEFT.load(Relaxed);
-            let _ = write!(stdout, "\rScanlines remaining: {}", remaining);
-            let _ = stdout.flush();
-
-            if remaining == 0 {
-                break;
-            }
-
-            thread::sleep(Duration::from_millis(100));
-        }
-    });
-
+    let scanlines_left: AtomicUsize = AtomicUsize::new(IMAGE_HEIGHT);
     let image = (0..IMAGE_HEIGHT)
         .into_par_iter()
         .rev()
         .map(|j| {
-            SCANLINES_LEFT.fetch_sub(1, Relaxed);
+            let remaining = scanlines_left.fetch_sub(1, Relaxed);
+            print!("\rScanlines remaining: {}", remaining);
 
             let mut row = Vec::with_capacity(IMAGE_WIDTH);
             let w = world.clone();
