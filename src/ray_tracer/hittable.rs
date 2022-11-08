@@ -2,15 +2,18 @@ use super::{
     data_structures::{Point3, Vec3},
     Ray,
 };
+use crate::ray_tracer::material::Material;
+use std::sync::Arc;
 
 pub trait Hittable {
     fn hit(&self, ray: &Ray, t_min: f64, t_max: f64, hit_info: &mut HitInfo) -> bool;
 }
 
-#[derive(Default, Copy, Clone)]
+#[derive(Default)]
 pub struct HitInfo {
     pub point: Point3,
     pub normal: Vec3,
+    pub material: Option<Arc<dyn Material>>,
     pub t: f64,
     pub front_face: bool,
 }

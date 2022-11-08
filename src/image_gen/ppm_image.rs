@@ -52,7 +52,7 @@ impl PpmImage {
             }
         }
 
-        file.write(buffer.as_bytes())?;
+        file.write_all(buffer.as_bytes())?;
         Ok(())
     }
 }

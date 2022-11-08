@@ -1,16 +1,23 @@
+use crate::ray_tracer::material::Material;
 pub use crate::ray_tracer::{
     data_structures::{dot, Point3},
     HitInfo, Hittable, Ray,
 };
+use std::sync::Arc;
 
 pub struct Sphere {
     pub center: Point3,
     pub radius: f64,
+    pub material: Arc<dyn Material>,
 }
 
 impl Sphere {
-    pub fn new(center: Point3, radius: f64) -> Self {
-        Self { center, radius }
+    pub fn new(center: Point3, radius: f64, material: Arc<dyn Material>) -> Self {
+        Self {
+            center,
+            radius,
+            material,
+        }
     }
 }
 
@@ -41,6 +48,7 @@ impl Hittable for Sphere {
 
         let outward_normal = (hit_info.point - self.center) / self.radius;
         hit_info.set_face_normal(ray, outward_normal);
+        hit_info.material = Some(self.material.clone());
 
         true
     }

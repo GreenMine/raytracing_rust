@@ -1,4 +1,4 @@
-use rand::distributions::{Standard, Uniform};
+use rand::distributions::Standard;
 use rand::prelude::Distribution;
 use rand::Rng;
 use std::{
@@ -34,6 +34,11 @@ impl Vec3 {
         self.x() * self.x() + self.y() * self.y() + self.z() * self.z()
     }
 
+    pub(crate) fn near_zero(&self) -> bool {
+        const s: f64 = 1.0e-8;
+        self.x().abs() < s && self.y().abs() < s && self.z().abs() < s
+    }
+
     pub(crate) fn random<R: Rng>(rng: &mut R, min: f64, max: f64) -> Self {
         Vec3(
             rng.gen_range(min..max),
@@ -53,13 +58,17 @@ impl Vec3 {
         }
     }
 
+    pub(crate) fn random_unit_sphere() -> Self {
+        unit_vector(Self::random_in_unit_sphere())
+    }
+
     pub(crate) fn random_in_hemisphere(normal: &Self) -> Self {
         let in_unit_sphere = Vec3::random_in_unit_sphere();
-        return if dot(&in_unit_sphere, normal) > 0.0 {
+        if dot(&in_unit_sphere, normal) > 0.0 {
             in_unit_sphere
         } else {
             -in_unit_sphere
-        };
+        }
     }
 }
 
@@ -99,6 +108,12 @@ impl MulAssign<f64> for Vec3 {
     }
 }
 
+impl MulAssign<Vec3> for Vec3 {
+    fn mul_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 * rhs.0, self.1 * rhs.1, self.2 * rhs.2)
+    }
+}
+
 impl DivAssign<f64> for Vec3 {
     fn div_assign(&mut self, rhs: f64) {
         *self *= 1f64 / rhs;
@@ -116,6 +131,15 @@ impl Add for Vec3 {
 impl Mul<f64> for Vec3 {
     type Output = Self;
     fn mul(mut self, rhs: f64) -> Self::Output {
+        self *= rhs;
+        self
+    }
+}
+
+impl Mul<Vec3> for Vec3 {
+    type Output = Self;
+
+    fn mul(mut self, rhs: Color) -> Self::Output {
         self *= rhs;
         self
     }

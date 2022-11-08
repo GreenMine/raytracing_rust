@@ -12,16 +12,11 @@ use ray_tracer::{
     objects::Sphere,
     HittableList, Ray,
 };
-use std::sync::atomic::Ordering::Relaxed;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex};
-use std::time::Duration;
-use std::{
-    fs::File,
-    io::{self, prelude::*},
-    thread,
-};
+use std::sync::atomic::{AtomicUsize, Ordering::Relaxed};
+use std::sync::Arc;
+use std::{fs::File, io};
 
+use crate::ray_tracer::materials::Lambertian;
 use rayon::prelude::*;
 
 const ASPECT_RATIO: f64 = 16.0 / 9.0;
@@ -34,15 +29,21 @@ const MAX_DEPTH: usize = 50;
 fn main() -> io::Result<()> {
     //Objects
     let mut world = HittableList::new();
-    world.add(Sphere::new(Point3(0.0, 0.0, -1.0), 0.5));
-    world.add(Sphere::new(Point3(0.0, -100.5, -1.0), 100.0));
+    world.add(Sphere::new(
+        Point3(0.0, 0.0, -1.0),
+        0.5,
+        Arc::new(Lambertian::new(Color(0.8, 0.8, 0.0))),
+    ));
+    world.add(Sphere::new(
+        Point3(0.0, -100.5, -1.0),
+        100.0,
+        Arc::new(Lambertian::new(Color(0.7, 0.3, 0.3))),
+    ));
 
     //Camera
     let camera = Camera::new();
 
     //Render
-    let world = Arc::new(world);
-
     let scanlines_left: AtomicUsize = AtomicUsize::new(IMAGE_HEIGHT);
     let image = (0..IMAGE_HEIGHT)
         .into_par_iter()
@@ -51,24 +52,18 @@ fn main() -> io::Result<()> {
             let remaining = scanlines_left.fetch_sub(1, Relaxed);
             print!("\rScanlines remaining: {}", remaining);
 
-            let mut row = Vec::with_capacity(IMAGE_WIDTH);
-            let w = world.clone();
             let mut rand = rand::thread_rng();
+            (0..IMAGE_WIDTH)
+                .map(|i| {
+                    (0..SAMPLES_PER_PIXEL).fold(Color::default(), |fold, _| {
+                        let u = (i as f64 + rand.gen::<f64>()) / (IMAGE_WIDTH - 1) as f64;
+                        let v = (j as f64 + rand.gen::<f64>()) / (IMAGE_HEIGHT - 1) as f64;
+                        let ray = camera.get_ray(u, v);
 
-            for i in 0..IMAGE_WIDTH {
-                let mut pixel_color = Color::default();
-                for _ in 0..SAMPLES_PER_PIXEL {
-                    let u = (i as f64 + rand.gen::<f64>()) / (IMAGE_WIDTH - 1) as f64;
-                    let v = (j as f64 + rand.gen::<f64>()) / (IMAGE_HEIGHT - 1) as f64;
-                    let ray = camera.get_ray(u, v);
-
-                    pixel_color += ray_color(ray, &w, MAX_DEPTH);
-                }
-                pixel_color /= SAMPLES_PER_PIXEL as f64;
-                row.push(pixel_color);
-            }
-
-            row
+                        fold + ray_color(ray, &world, MAX_DEPTH)
+                    }) / (SAMPLES_PER_PIXEL as f64)
+                })
+                .collect::<Vec<_>>()
         })
         .collect::<PpmImage>();
 
@@ -82,19 +77,22 @@ fn main() -> io::Result<()> {
 fn ray_color(ray: Ray, world: &HittableList, depth: usize) -> Color {
     let mut hit_info = HitInfo::default();
 
-    if depth <= 0 {
-        return Color(0.0, 0.0, 0.0);
+    if depth == 0 {
+        return Color::default();
     }
 
     if world.hit(&ray, 0.001, f64::INFINITY, &mut hit_info) {
-        let target =
-            hit_info.point + hit_info.normal + Vec3::random_in_hemisphere(&hit_info.normal);
-        return 0.5
-            * ray_color(
-                Ray::new(hit_info.point, target - hit_info.point),
-                world,
-                depth - 1,
-            );
+        let mut scattered = Ray::default();
+        let mut attenuation = Color::default();
+        if hit_info.material.as_ref().unwrap().scatter(
+            &ray,
+            &hit_info,
+            &mut attenuation,
+            &mut scattered,
+        ) {
+            return attenuation * ray_color(scattered, &world, depth - 1);
+        }
+        return Color::default();
     }
 
     let unit_direction = unit_vector(ray.direction); //scaling to -1 < unit_direction < 1
