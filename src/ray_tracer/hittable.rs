@@ -3,19 +3,28 @@ use super::{
     Ray,
 };
 use crate::ray_tracer::material::Material;
+use crate::ray_tracer::materials;
 use std::sync::Arc;
 
 pub trait Hittable {
     fn hit(&self, ray: &Ray, t_min: f64, t_max: f64, hit_info: &mut HitInfo) -> bool;
 }
 
-#[derive(Default)]
 pub struct HitInfo {
     pub point: Point3,
     pub normal: Vec3,
-    pub material: Option<Arc<dyn Material>>,
+    pub material: Arc<dyn Material>,
     pub t: f64,
     pub front_face: bool,
+}
+
+impl Default for HitInfo {
+    fn default() -> Self {
+        Self {
+            material: Arc::new(materials::Default),
+            ..Default::default()
+        }
+    }
 }
 
 impl HitInfo {

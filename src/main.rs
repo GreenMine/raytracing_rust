@@ -20,7 +20,7 @@ use crate::ray_tracer::materials::Lambertian;
 use rayon::prelude::*;
 
 const ASPECT_RATIO: f64 = 16.0 / 9.0;
-const IMAGE_WIDTH: usize = 3840;
+const IMAGE_WIDTH: usize = 1920;
 const IMAGE_HEIGHT: usize = (IMAGE_WIDTH as f64 / ASPECT_RATIO) as usize;
 const SAMPLES_PER_PIXEL: u16 = 100;
 
@@ -84,12 +84,10 @@ fn ray_color(ray: Ray, world: &HittableList, depth: usize) -> Color {
     if world.hit(&ray, 0.001, f64::INFINITY, &mut hit_info) {
         let mut scattered = Ray::default();
         let mut attenuation = Color::default();
-        if hit_info.material.as_ref().unwrap().scatter(
-            &ray,
-            &hit_info,
-            &mut attenuation,
-            &mut scattered,
-        ) {
+        if hit_info
+            .material
+            .scatter(&ray, &hit_info, &mut attenuation, &mut scattered)
+        {
             return attenuation * ray_color(scattered, &world, depth - 1);
         }
         return Color::default();

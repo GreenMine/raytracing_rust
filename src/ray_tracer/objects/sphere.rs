@@ -48,7 +48,7 @@ impl Hittable for Sphere {
 
         let outward_normal = (hit_info.point - self.center) / self.radius;
         hit_info.set_face_normal(ray, outward_normal);
-        hit_info.material = Some(self.material.clone());
+        hit_info.material = self.material.clone();
 
         true
     }
