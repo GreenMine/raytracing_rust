@@ -21,8 +21,11 @@ pub struct HitInfo {
 impl Default for HitInfo {
     fn default() -> Self {
         Self {
+            point: Point3::default(),
+            normal: Vec3::default(),
             material: Arc::new(materials::Default),
-            ..Default::default()
+            t: f64::default(),
+            front_face: bool::default(),
         }
     }
 }

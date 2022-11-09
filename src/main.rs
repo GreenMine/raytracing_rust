@@ -16,11 +16,11 @@ use std::sync::atomic::{AtomicUsize, Ordering::Relaxed};
 use std::sync::Arc;
 use std::{fs::File, io};
 
-use crate::ray_tracer::materials::Lambertian;
+use crate::ray_tracer::materials::{Lambertian, Metal};
 use rayon::prelude::*;
 
 const ASPECT_RATIO: f64 = 16.0 / 9.0;
-const IMAGE_WIDTH: usize = 1920;
+const IMAGE_WIDTH: usize = 400;
 const IMAGE_HEIGHT: usize = (IMAGE_WIDTH as f64 / ASPECT_RATIO) as usize;
 const SAMPLES_PER_PIXEL: u16 = 100;
 
@@ -30,14 +30,24 @@ fn main() -> io::Result<()> {
     //Objects
     let mut world = HittableList::new();
     world.add(Sphere::new(
-        Point3(0.0, 0.0, -1.0),
-        0.5,
-        Arc::new(Lambertian::new(Color(0.8, 0.8, 0.0))),
-    ));
-    world.add(Sphere::new(
         Point3(0.0, -100.5, -1.0),
         100.0,
-        Arc::new(Lambertian::new(Color(0.7, 0.3, 0.3))),
+        Lambertian::new(Color(0.8, 0.8, 0.0)),
+    ));
+    world.add(Sphere::new(
+        Point3(0.0, 0.0, -1.0),
+        0.5,
+        Lambertian::new(Color(0.7, 0.3, 0.3)),
+    ));
+    world.add(Sphere::new(
+        Point3(-1.0, 0.0, -1.0),
+        0.5,
+        Metal::new(Color(0.8, 0.8, 0.8), 0.3),
+    ));
+    world.add(Sphere::new(
+        Point3(1.0, 0.0, -1.0),
+        0.5,
+        Metal::new(Color(0.8, 0.6, 0.2), 1.0),
     ));
 
     //Camera
