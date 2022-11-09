@@ -32,12 +32,12 @@ fn main() -> io::Result<()> {
     world.add(Sphere::new(
         Point3(0.0, 0.0, -1.0),
         0.5,
-        Arc::new(Lambertian::new(Color(0.8, 0.8, 0.0))),
+        Box::new(Lambertian::new(Color(0.8, 0.8, 0.0))),
     ));
     world.add(Sphere::new(
         Point3(0.0, -100.5, -1.0),
         100.0,
-        Arc::new(Lambertian::new(Color(0.7, 0.3, 0.3))),
+        Box::new(Lambertian::new(Color(0.7, 0.3, 0.3))),
     ));
 
     //Camera
@@ -81,13 +81,16 @@ fn ray_color(ray: Ray, world: &HittableList, depth: usize) -> Color {
         return Color::default();
     }
 
-    if world.hit(&ray, 0.001, f64::INFINITY, &mut hit_info) {
+    let hit = { world.hit(&ray, 0.001, f64::INFINITY, &mut hit_info) };
+    if hit {
         let mut scattered = Ray::default();
         let mut attenuation = Color::default();
-        if hit_info
-            .material
-            .scatter(&ray, &hit_info, &mut attenuation, &mut scattered)
-        {
+        if hit_info.material.as_ref().unwrap().scatter(
+            &ray,
+            &hit_info,
+            &mut attenuation,
+            &mut scattered,
+        ) {
             return attenuation * ray_color(scattered, &world, depth - 1);
         }
         return Color::default();

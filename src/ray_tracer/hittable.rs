@@ -7,27 +7,26 @@ use crate::ray_tracer::materials;
 use std::sync::Arc;
 
 pub trait Hittable {
-    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64, hit_info: &mut HitInfo) -> bool;
+    fn hit<'a>(&'a self, ray: &'a Ray, t_min: f64, t_max: f64, hit_info: &mut HitInfo<'a>) -> bool;
 }
 
-pub struct HitInfo {
+pub struct HitInfo<'a> {
     pub point: Point3,
     pub normal: Vec3,
-    pub material: Arc<dyn Material>,
+    pub material: Option<&'a dyn Material>,
     pub t: f64,
     pub front_face: bool,
 }
 
-impl Default for HitInfo {
+impl<'a> Default for HitInfo<'a> {
     fn default() -> Self {
         Self {
-            material: Arc::new(materials::Default),
             ..Default::default()
         }
     }
 }
 
-impl HitInfo {
+impl<'a> HitInfo<'a> {
     pub fn set_face_normal(&mut self, ray: &Ray, outward_normal: Vec3) {
         self.front_face =
             crate::ray_tracer::data_structures::dot(&ray.direction, &outward_normal) < 0.0;

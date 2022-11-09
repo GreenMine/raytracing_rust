@@ -3,16 +3,16 @@ pub use crate::ray_tracer::{
     data_structures::{dot, Point3},
     HitInfo, Hittable, Ray,
 };
-use std::sync::Arc;
+use std::marker::PhantomData;
 
 pub struct Sphere {
     pub center: Point3,
     pub radius: f64,
-    pub material: Arc<dyn Material>,
+    pub material: Box<dyn Material>,
 }
 
 impl Sphere {
-    pub fn new(center: Point3, radius: f64, material: Arc<dyn Material>) -> Self {
+    pub fn new(center: Point3, radius: f64, material: Box<dyn Material>) -> Self {
         Self {
             center,
             radius,
@@ -22,7 +22,7 @@ impl Sphere {
 }
 
 impl Hittable for Sphere {
-    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64, hit_info: &mut HitInfo) -> bool {
+    fn hit<'a>(&'a self, ray: &'a Ray, t_min: f64, t_max: f64, hit_info: &mut HitInfo<'a>) -> bool {
         let pos = ray.origin - self.center;
 
         let a = ray.direction.length_squared();
@@ -48,7 +48,7 @@ impl Hittable for Sphere {
 
         let outward_normal = (hit_info.point - self.center) / self.radius;
         hit_info.set_face_normal(ray, outward_normal);
-        hit_info.material = self.material.clone();
+        hit_info.material = Some(self.material.as_ref());
 
         true
     }
